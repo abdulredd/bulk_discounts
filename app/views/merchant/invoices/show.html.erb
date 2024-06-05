@@ -11,7 +11,8 @@
   <br>
 
   <p> Created on: <%= @invoice.created_at.strftime("%A, %B %-d, %Y") %></p>
-  <p>Total Revenue: <%= @invoice.total_revenue %></p>
+  <p>Total Revenue: <%= number_to_currency(@invoice.merchant_total_revenue(@merchant)) %></p>
+  <p>Discounted Revenue: <%= number_to_currency(@invoice.merchant_total_revenue(@merchant) - @invoice.merchant_discount_amount(@merchant)) %></p>
 
 
   <h4>Customer:</h4>
@@ -26,22 +27,30 @@
         <th class="th1">Quantity</th>
         <th class="th1">Unit Price</th>
         <th class="th1">Status</th>
+        <th class="th1">Discount</th>
       </tr>
     </thead>
 
     <tbody>
-      <% @invoice.invoice_items.each do |i| %>
-        <section id="the-status-<%= i.id %>">
+      <%# @invoice.invoice_items.each do |invoice_item| %>
+      <% @invoice.merchant_items(@merchant).each do |invoice_item| %>
+        <section id="the-status-<%= invoice_item.id %>">
           <tr class="tr">
-            <td style="text-align:center"><%= i.item.name %></td>
-            <td style="text-align:center"><%= i.quantity %></td>
-            <td style="text-align:center">$<%= i.unit_price %></td>
+            <td style="text-align:center"><%= invoice_item.item.name %></td>
+            <td style="text-align:center"><%= invoice_item.quantity %></td>
+            <td style="text-align:center"><%= number_to_currency(invoice_item.unit_price) %></td>
             <td style="text-align:center">
               <%= form_with model: @invoice, url: merchant_invoice_path(@merchant, @invoice), method: :patch, local: true do |f| %>
                 <%= f.select :status, Invoice.statuses.keys, selected: "#{@invoice.status}" %>
                 <%= f.submit 'Update Invoice' %>
               <% end %>
-              </td>
+            </td>
+            <td style="text-align:center">
+              <%= if invoice_item.find_discount&.id
+                    link_to "Applied Discount", merchant_discount_path(@merchant, invoice_item.find_discount.id) 
+                  end
+              %>
+            </td>
           </tr>
         </section>
       <% end %>

@@ -1,4 +1,4 @@
-class ItemsController < ApplicationController
+class Merchant::ItemsController < ApplicationController
   before_action :find_item_and_merchant, only: [:show, :edit, :update]
   before_action :find_merchant, only: [:new, :create, :index]
 

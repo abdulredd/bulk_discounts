@@ -1,8 +1,9 @@
 require "rails_helper"
 
-describe "Admin Invoices Index Page" do
+describe "Admin Invoices Show Page" do
   before :each do
     @m1 = Merchant.create!(name: "Merchant 1")
+    @m2 = Merchant.create!(name: "Merchant 2")
 
     @c1 = Customer.create!(first_name: "Yo", last_name: "Yoz", address: "123 Heyyo", city: "Whoville", state: "CO", zip: 12345)
     @c2 = Customer.create!(first_name: "Hey", last_name: "Heyz")
@@ -13,9 +14,23 @@ describe "Admin Invoices Index Page" do
     @item_1 = Item.create!(name: "test", description: "lalala", unit_price: 6, merchant_id: @m1.id)
     @item_2 = Item.create!(name: "rest", description: "dont test me", unit_price: 12, merchant_id: @m1.id)
 
-    @ii_1 = InvoiceItem.create!(invoice_id: @i1.id, item_id: @item_1.id, quantity: 12, unit_price: 2, status: 0)
-    @ii_2 = InvoiceItem.create!(invoice_id: @i1.id, item_id: @item_2.id, quantity: 6, unit_price: 1, status: 1)
+    @item_3 = Item.create!(name: "Bracelet", description: "Wrist bling", unit_price: 200, merchant_id: @m2.id)
+
+    @ii_1 = InvoiceItem.create!(invoice_id: @i1.id, item_id: @item_1.id, quantity: 9, unit_price: 10, status: 0) # 90
+    @ii_2 = InvoiceItem.create!(invoice_id: @i1.id, item_id: @item_2.id, quantity: 12, unit_price: 6, status: 1) # 72
+    @ii_4 = InvoiceItem.create!(invoice_id: @i1.id, item_id: @item_3.id, quantity: 1, unit_price: 200, status: 1) # 200
+
     @ii_3 = InvoiceItem.create!(invoice_id: @i2.id, item_id: @item_2.id, quantity: 87, unit_price: 12, status: 2)
+
+    @discount_1 = BulkDiscount.create!(percentage: 20.0, quantity_threshold: 5, merchant: @m1)
+    @discount_2 = BulkDiscount.create!(percentage: 15.0, quantity_threshold: 10, merchant: @m1)
+
+    @discount_3 = BulkDiscount.create!(percentage: 10.0, quantity_threshold: 2, merchant: @m2)
+
+    # Math Stuff
+    # Invoice 1
+    # Total Revenue: $90 + $72 + $200 = $362
+    # Discounted Revenue: $72 (20% off $90) + $56.60 (20% off $72) + $200 (doesn't meet qty threshold for Merchant 2) = $328.60
 
     visit admin_invoice_path(@i1)
   end
@@ -67,6 +82,27 @@ describe "Admin Invoices Index Page" do
 
       expect(current_path).to eq(admin_invoice_path(@i1))
       expect(@i1.status).to eq("completed")
+    end
+  end
+
+  describe "As an admin" do
+    describe "When I visit an admin invoice show page" do
+
+      describe "8: Admin Invoice Show Page: Total Revenue and Discounted Revenue" do
+        it "I see the total revenue from this invoice (not including discounts)" do
+        # The difference between US8 & US6 is that US6 is for a specific merchant whereas US8 is for all merchants on the invoice
+
+        # Invoice 1
+        # This invoice contains 2 items from Merchant 1 totaling $162
+        # and 1 item from Merchant 2 totaling $200
+          expect(page).to have_content("Total Revenue: $362.00")
+        end
+
+        it "And I see the total discounted revenue from this invoice which includes bulk discounts in the calculation" do
+          # Invoice 1
+          expect(page).to have_content("Discounted Revenue: $329.60")
+        end
+      end
     end
   end
 end

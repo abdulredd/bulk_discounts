@@ -7,6 +7,8 @@ class Item < ApplicationRecord
   has_many :invoice_items
   has_many :invoices, through: :invoice_items
   belongs_to :merchant
+  # has_many :bulk_discounts, through: :merchant
+  has_one :bulk_discounts, through: :merchant # Theoretically an Item can have many BulkDiscounts but only one will ever be applied
 
   enum status: [:disabled, :enabled]
 

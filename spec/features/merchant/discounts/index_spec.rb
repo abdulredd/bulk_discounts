@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "merchant dashboard" do
+RSpec.describe "Merchant Discounts Index Page", type: :feature do
   before :each do
     @merchant1 = Merchant.create!(name: "Hair Care")
 
@@ -40,83 +40,73 @@ RSpec.describe "merchant dashboard" do
     @transaction6 = Transaction.create!(credit_card_number: 879799, result: 1, invoice_id: @invoice_7.id)
     @transaction7 = Transaction.create!(credit_card_number: 203942, result: 1, invoice_id: @invoice_2.id)
 
-    visit merchant_dashboard_index_path(@merchant1)
+    @discount_1 = BulkDiscount.create!(percentage: 20, quantity_threshold: 10, merchant: @merchant1)
+    @discount_2 = BulkDiscount.create!(percentage: 30, quantity_threshold: 15, merchant: @merchant1)
+
+    visit merchant_discounts_path(@merchant1)
   end
 
-  it "shows the merchant name" do
-    expect(page).to have_content(@merchant1.name)
-  end
+  describe "As a merchant" do
+    describe "When I visit my merchant bulk discounts index page" do
 
-  it "can see a link to my merchant items index" do
-    expect(page).to have_link("Items")
 
-    click_link "Items"
+      describe "1: Merchant Bulk Discounts Index (Part 2)" do
+        it "I see all of my bulk discounts including their percentage discount and quantity thresholds" do
+          within "#all-discounts" do
+            expect(page).to have_content("Take #{@discount_1.percentage}% off when you purchase #{@discount_1.quantity_threshold} or more.")
+            expect(page).to have_content("Take #{@discount_2.percentage}% off when you purchase #{@discount_2.quantity_threshold} or more.")
+          end
+        end
 
-    expect(current_path).to eq("/merchants/#{@merchant1.id}/items")
-  end
+        it "And each bulk discount listed includes a link to its show page" do
+          # Loop through each paragraph
+          # https://www.rubydoc.info/github/jnicklas/capybara/Capybara%2FNode%2FFinders:all
+          all(".discount p") do |paragraph|
+            within paragraph do
+              expect(page).to have_link "Show Discount"
+            end
+          end
+        end
+      end
 
-  it "can see a link to my merchant invoices index" do
-    expect(page).to have_link("Invoices")
+      describe "2: Merchant Bulk Discount Create (Part 1)" do
+        it "I see a link to create a new discount" do
+          expect(page).to have_link "Create New Discount"
+        end
 
-    click_link "Invoices"
+        it "When I click this link, then I am taken to a new page where I see a form to add a new bulk discount" do
+          click_link "Create New Discount"
 
-    expect(current_path).to eq("/merchants/#{@merchant1.id}/invoices")
-  end
+          expect(current_path).to eq(new_merchant_discount_path(@merchant1))
+        end
+      end
 
-  it "shows the names of the top 5 customers with successful transactions" do
-    within("#customer-#{@customer_1.id}") do
-      expect(page).to have_content(@customer_1.first_name)
-      expect(page).to have_content(@customer_1.last_name)
+      describe "3: Merchant Bulk Discount Delete" do
+        it "Then next to each bulk discount I see a link to delete it" do
+          # Loop through each paragraph
+          # https://www.rubydoc.info/github/jnicklas/capybara/Capybara%2FNode%2FFinders:all
+          all(".discount p") do |paragraph|
+            within paragraph do
+              expect(page).to have_link "Delete Discount"
+            end
+          end
+        end
 
-      expect(page).to have_content(3)
+        it "When I click this link, then I am redirected back to the bulk discounts index page" do
+          click_link "Delete Discount", match: :first
+
+          expect(current_path).to eq(merchant_discounts_path(@merchant1))
+        end
+
+        it "And I no longer see the discount listed" do
+          click_link "Delete Discount", match: :first
+
+          within "#all-discounts" do
+            expect(page).to_not have_content("Take 20% off when you purchase 10 or more. Show Discount")
+            expect(page).to have_content("Take 30% off when you purchase 15 or more. Show Discount")
+          end
+        end
+      end
     end
-    within("#customer-#{@customer_2.id}") do
-      expect(page).to have_content(@customer_2.first_name)
-      expect(page).to have_content(@customer_2.last_name)
-      expect(page).to have_content(1)
-    end
-    within("#customer-#{@customer_3.id}") do
-      expect(page).to have_content(@customer_3.first_name)
-      expect(page).to have_content(@customer_3.last_name)
-      expect(page).to have_content(1)
-    end
-    within("#customer-#{@customer_4.id}") do
-      expect(page).to have_content(@customer_4.first_name)
-      expect(page).to have_content(@customer_4.last_name)
-      expect(page).to have_content(1)
-    end
-    within("#customer-#{@customer_5.id}") do
-      expect(page).to have_content(@customer_5.first_name)
-      expect(page).to have_content(@customer_5.last_name)
-      expect(page).to have_content(1)
-    end
-    expect(page).to have_no_content(@customer_6.first_name)
-    expect(page).to have_no_content(@customer_6.last_name)
-  end
-  it "can see a section for Items Ready to Ship with list of names of items ordered and ids" do
-    within("#items_ready_to_ship") do
-
-      expect(page).to have_content(@item_1.name)
-      expect(page).to have_content(@item_1.invoice_ids)
-
-      expect(page).to have_content(@item_2.name)
-      expect(page).to have_content(@item_2.invoice_ids)
-
-      expect(page).to have_no_content(@item_3.name)
-      expect(page).to have_no_content(@item_3.invoice_ids)
-    end
-  end
-
-  it "each invoice id is a link to my merchant's invoice show page " do
-    expect(page).to have_link("#{@item_1.invoice_ids}")
-    expect(page).to have_link("#{@item_2.invoice_ids}")
-    expect(page).to_not have_link("#{@item_3.invoice_ids}")
-
-    click_link("#{@item_1.invoice_ids}", match: :first)
-    expect(current_path).to eq("/merchants/#{@merchant1.id}/invoices/#{@invoice_1.id}")
-  end
-
-  it "shows the date that the invoice was created in this format: Monday, July 18, 2019" do
-    expect(page).to have_content(@invoice_1.created_at.strftime("%A, %B %-d, %Y"))
   end
 end
